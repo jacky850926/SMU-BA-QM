@@ -1,0 +1,164 @@
+---
+title: "Predicting the Quality of Wine"
+author: "ZHENG Zhichao (Daniel)"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    theme: readable
+    self_contained: TRUE
+    toc: TRUE
+    number_sections: TRUE
+    df_print: paged
+---
+
+
+
+# Loading and Exploring the Data Set
+
+
+
+Let's first read the data set from the file. Remember to make sure that you are working in the directory containing the data file. If you just created a new R Notebook file, please save it in the same directory containing the data file.
+```{r}
+wine = read.csv("Wine.csv")
+str(wine)
+```
+
+
+We can look at the summary of our data.
+```{r}
+summary(wine)
+```
+
+
+We can explore the relationship between any two variables. For example, let's see how the wine price changes with the temperature, represented by *AGST*, which stands for the average growing season temperature. We can add a horizontal line that represents the historical average price.
+```{r}
+plot(wine$AGST, wine$Price)
+abline(h = mean(wine$Price), col = "red")
+```
+
+
+
+# Building Linear Regression Models
+
+
+
+Let's start by creating a one-variable linear regression equation using *AGST* to predict *Price*. Here we use the 'lm' function, which stands for 'linear model.'
+```{r}
+model1 = lm(Price ~ AGST, data = wine)
+summary(model1)
+```
+
+
+Please refer to the slides for the interpretation of the regression results.
+
+
+We can plot the regression line of our model, together with the benchmark prediction using the historical average price.
+```{r}
+plot(wine$AGST, wine$Price)
+abline(h = mean(wine$Price), col = "red")
+abline(model1, col = "green")
+```
+
+
+We can compute the sum of squared errors. The residuals, or errors, are stored in the vector, *model1$residuals*.
+```{r}
+SSE1 = sum(model1$residuals^2)
+SSE1
+```
+
+
+Now, let's add another variable, *HarvestRain*, to our regression model.
+```{r}
+model2 = lm(Price ~ AGST + HarvestRain, data = wine)
+summary(model2)
+```
+
+
+Again, we can compute the sum of squared errors of this new model.
+```{r}
+SSE2 = sum(model2$residuals^2)
+SSE2
+```
+
+
+Let's build a third model with all of our independent variables and compute its sum of squared errors.
+```{r}
+model3 = lm(Price ~ AGST + HarvestRain + WinterRain + Age + FrancePop, data = wine)
+summary(model3)
+```
+
+
+```{r}
+SSE3 = sum(model3$residuals^2)
+SSE3
+```
+
+
+
+# Refining the Model
+
+
+
+By looking at the previous results, we can see that both *Age* and *FrancePopulation* are insignificant in our model, which is very strange as we expect *Age* to be significantly related to the wine price. This suggests that something is wrong in our model, and most likely, it is due to a multicollearity problem. In particular, we suspect *Age* and *FrancePopulation* are highly correlated. We can compute the correlation coefficients of all the variables by calling the 'cor' function
+```{r}
+cor(wine)
+```
+
+
+From the outputs, we can confirm that *Age* and *FrancePopulation* are highly correlated with an almost -1 correlation coefficient. The strong negative correlation between Age and FrancePopulation can be visualized in a scatter plot.
+```{r}
+plot(wine$Age, wine$FrancePop)
+```
+
+
+Because of this, we should consider removing one of them from our model. Let's start by just removing *FrancePopulation*, which we intuitively do not expect to be very predictive of wine price anyway.
+```{r}
+model4 = lm(Price ~ AGST + HarvestRain + WinterRain + Age, data = wine)
+summary(model4)
+```
+
+
+Now all the independent variables are significant in our new model, including *Age*, which was not significant in the previous model. This further confirms the multicollinearity problem in the previous model.
+
+
+You can try removing *Age*, instead of *FrancePopulation*. You will get a model that is almost equivalent to the one using *Age* in terms of predictive power, i.e., they have very similar R squared. In this case, we would prefer to keep *Age* but remove *FrancePopulation* because *Age* is more interpretable, and the model using *Age* is more user friendly for managers and customers. Another important reason is that the relationship between *FrancePopulation* and *Price* could be spurious relationship. In other words, we have sufficient reasons to suspect that the relationship between *FrancePopulation* and *Price* is a consequence of the relationship between *Age* and *Price* and the relationship between *Age* and *FrancePopulation*. Suppose that we also collected some data on the population of any other country in the world, say Singapore, as long as it was increasing over the years, that population data will be significantly correlated with *Price* as it is correlated with *Age*, which does not make any sense to include that population variable in the model.
+
+
+To further refining the model, we can consider removing some relatively insignificant variables. You are advised to remove insignificant variables one at a time. Let's see what would happen if we further remove *WinterRain*.
+```{r}
+model5 = lm(Price ~ AGST + HarvestRain + Age, data = wine)
+summary(model5)
+```
+
+
+If you believe that the drop in R-squared is significant, you should keep *WinterRain* together with the other three variables in the final model.
+For this demonstration, let's keep *WinterRain* in the final model.
+
+
+
+# Testing the Model
+
+
+
+Now let's test our prediction model on the test data, which we will read in first.
+```{r}
+wineTest = read.csv("Wine_Test.csv")
+str(wineTest)
+```
+
+
+We can call the 'predict' function to make predictions for the test data points.
+```{r}
+predictTest = predict(model4, newdata = wineTest)
+predictTest
+```
+
+
+To assess the accuracy of our predictions, we can compute the out-of-sample R-squared.
+```{r}
+SSE = sum((wineTest$Price - predictTest)^2)
+SST = sum((wineTest$Price - mean(wine$Price))^2)
+1 - SSE/SST
+```
+
+
