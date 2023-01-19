@@ -44,7 +44,7 @@ abline(h = mean(wine$Price), col = "red")
 
 Let's start by creating a one-variable linear regression equation using *AGST* to predict *Price*. Here we use the 'lm' function, which stands for 'linear model.'
 ```{r}
-model1 = lm(Price ~ AGST, data = wine)
+model1 = lm(Price ~ AGST + , data = wine)
 summary(model1)
 ```
 
@@ -56,7 +56,16 @@ We can plot the regression line of our model, together with the benchmark predic
 ```{r}
 plot(wine$AGST, wine$Price)
 abline(h = mean(wine$Price), col = "red")
-abline(model1, col = "green")
+abline(model1, col = "darkblue")
+```
+
+
+```{r}
+model1$residuals
+```
+
+```{r}
+model1$residuals^2
 ```
 
 
@@ -64,6 +73,7 @@ We can compute the sum of squared errors. The residuals, or errors, are stored i
 ```{r}
 SSE1 = sum(model1$residuals^2)
 SSE1
+sqrt(SSE1/nrow(wine))
 ```
 
 
@@ -100,6 +110,7 @@ SSE3
 
 
 By looking at the previous results, we can see that both *Age* and *FrancePopulation* are insignificant in our model, which is very strange as we expect *Age* to be significantly related to the wine price. This suggests that something is wrong in our model, and most likely, it is due to a multicollearity problem. In particular, we suspect *Age* and *FrancePopulation* are highly correlated. We can compute the correlation coefficients of all the variables by calling the 'cor' function
+(beware not using categorical var, only works for numerical var)
 ```{r}
 cor(wine)
 ```
@@ -112,6 +123,8 @@ plot(wine$Age, wine$FrancePop)
 
 
 Because of this, we should consider removing one of them from our model. Let's start by just removing *FrancePopulation*, which we intuitively do not expect to be very predictive of wine price anyway.
+
+Removing FrancePop but not remove the Age is because it make more sense to have the estimated model with Age of Wine but not Population.s
 ```{r}
 model4 = lm(Price ~ AGST + HarvestRain + WinterRain + Age, data = wine)
 summary(model4)
@@ -155,6 +168,7 @@ predictTest
 
 
 To assess the accuracy of our predictions, we can compute the out-of-sample R-squared.
+you should use the mean of "training set" to calculate SST (why?)
 ```{r}
 SSE = sum((wineTest$Price - predictTest)^2)
 SST = sum((wineTest$Price - mean(wine$Price))^2)

@@ -1,0 +1,133 @@
+---
+title: "Assignment -- Linear Regression"
+author: "Ma Hsin Chieh"
+output:
+  html_document:
+    theme: readable
+    df_print: paged
+---
+
+
+### Problem Statement
+
+
+In this exercise, we are interested in predicting a patient's length of stay (LOS) in the intensive care unit (ICU) using his or her demographic information and the worst reading of critical clinical variables during the first 24-hour stay in the ICU. We will use the data contained in the file "Assignment_Linear_Regression_Data_Train.csv" to build models, and "Assignment_Linear_Regression_Data_Test.csv" will be used in out-of-sample validation. 
+
+
+
+
+
+
+### Questions
+
+```{r}
+
+#install the package
+library(dplyr)
+# load csv
+train = read.csv("Assignment_Linear_Regression_Data_Train.csv")
+# find the avg of the table
+summary(train)
+
+df <-data.frame(Q1=c(train$Gender))
+df %>% count(Q1)
+
+#another way of doing calculation
+male <- subset(train, Gender =="Male")
+precentage_male = nrow(male)/nrow(train)
+precentage_male
+
+```
+
+
+1. Load and explore the training data file, check summary statistics of all the variables, and answer the following questions.
+
+    i) What is the average age of the patients?
+    59.57
+     
+    ii) What is the percentage of male patients?
+    72.3%
+
+2. Build a linear regression model to predict the LOS using vital signs (check the data description file to identify the list of vital signs). Use the training set to build the model.
+
+```{r}
+model1 = lm(LOS~Temperature+ RespirationRate+ HeartRate + SystolicBP + DiastolicBP + SpO2, data = train)
+summary(model1)
+
+```
+
+
+    i) What is the linear regression equation produced by your model? Make sure to give the coefficients for each of the independent variables.
+    
+    LOS = -0.02745 Temperature - 0.56502 RespirationRate + 0.29940 HeartRate - 0.46818 SystolicBP - 1.40764 DiastolicBP - 1.77067 SpO2
+     
+    ii) What is the $R^2$ of the model?
+    
+    0.02237
+     
+    iii) Which variables are significant? We consider a variable significant only if its *p*-value is below 0.05.
+    only DiastolicBP is significant
+
+    
+
+3. We want to improve our linear regression model by including all the variables in the analysis. 
+
+
+```{r}
+model2 = lm(LOS~Age + Gender + Race + Temperature+ RespirationRate+ HeartRate + SystolicBP + DiastolicBP + SpO2 + Haemoglobin + NumWBC + ArterialpO2 + Creatinine + Urea + GCS , data = train)
+
+summary(model2)
+
+model3 = lm(LOS~ ArterialpO2 + Creatinine + Urea + GCS , data = train)
+
+summary(model3)
+```
+
+
+    i) What is the $R^2$ of the new model?
+    
+    0.08234
+     
+    ii) Which variables are significant? We consider a variable significant only if its *p*-value is below 0.05. Build another linear regression model using only these significant variables. What is the $R^2$ of this model?
+    
+    ArterialpO2 , Creatinine , Urea , GCS
+    0.07561
+    
+    iii) What do you think about the accuracy and values of the model?
+    
+    R-square only 7.5%, which means the linear regression model can only explained 7.5% of the variation dat, is not that useful. Can not explained the data
+
+
+4. We want to test the performance of our models using the test data set. 
+
+```{r}
+test = read.csv("Assignment_Linear_Regression_Data_Test.csv")
+str(test)
+
+#count for all variables 
+predictTest2 = predict(model2, newdata = test)
+
+SSE2 = sum((test$LOS - predictTest2)^2)
+SST2 = sum((test$LOS - mean(train$LOS))^2)
+R2 = (1 - SSE2/SST2)
+# the out-of-sample R^2
+R2
+
+
+#count for only vital signs
+predictTest1 = predict(model1, newdata = test)
+
+SSE1 = sum((test$LOS - predictTest1)^2)
+SST1 = sum((test$LOS - mean(train$LOS))^2)
+R1 = (1 - SSE1/SST1)
+# the out-of-sample R^2
+R1
+
+```
+
+
+    i) What is the out-of-sample $R^2$ of the model using all the variables? Please check carefully how the out-of-sample $R^2$ is computed in the lecture note for the wine case study. Note that the benchmark baseline model is still the historical average price of the training data set, not the average price of the test data set. The point here is that the benchmark model also does not know the future, and it cannot use the future average price to predict the future. 
+    -0.03569267
+    
+    ii) What is the out-of-sample $R^2$ of our first model using only vital signs?
+    0.09480606
