@@ -1,0 +1,127 @@
+---
+title: "Moneyball"
+author: "ZHENG Zhichao (Daniel)"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    theme: readable
+    self_contained: TRUE
+    toc: TRUE
+    number_sections: TRUE
+    df_print: paged
+---
+
+
+
+# Loading and Exploring the Data Set
+
+
+
+Let's first read the data set from the file. 
+```{r}
+baseball = read.csv("Moneyball.csv", stringsAsFactors = TRUE)
+str(baseball)
+```
+
+
+Since we are confirming the claims made in Moneyball, we want to build models using the data Paul DePodesta had in 2002. 
+```{r}
+moneyball = subset(baseball, Year < 2002)
+str(moneyball)
+```
+
+
+We will work on this subset of the data from now on.
+
+
+
+# Predicting Wins
+
+
+
+We first build a linear regression model to predict wins using the difference between runs scored and runs allowed. To make this a little easier, we can create a new variable called, *RD*, for run difference, and set that equal to runs scored minus runs allowed.
+```{r}
+moneyball$RD = moneyball$RS - moneyball$RA
+str(moneyball)
+```
+
+
+Now we are ready to build the linear regression model using the new variable.
+```{r}
+PredictWins = lm(W ~ RD, data = moneyball)
+summary(PredictWins)
+```
+
+
+This gives us the linear regression equation for wins shown in the slides.
+
+
+
+# Predicting Runs Scored
+
+
+
+We want to see if we can use linear regression to predict runs scored (*RS*) using the three hitting statistics, on-base percentage (*OBP*), slugging percentage (*SLG*), and batting average (*BA*).
+```{r}
+PredictRS = lm(RS ~ OBP + SLG + BA, data = moneyball)
+summary(PredictRS)
+```
+
+
+According to the definitions (which you can find online if you are interested), all of the three statistics are very similar to each other, and they measure the hitting performance of the players. The larger these statistics are, the better the players' hitting performance would be. Therefore, we expect the coefficients of all these variables to be positive, as better players should lead to more runs. The counterintuitive negative coefficient of batting average shows that there could be something wrong with the model. Note that if the model prediction accuracy is the only thing we care about, the model is good. However, in the Moneyball case, the team relies on the model to hire potential players, so wrong coefficients could lead to seriously wrong decision. For example, the negative coefficient for batting average would indicate that the team should choose the players with lower batting average.
+
+
+
+Given the fact that these statistics are closely related to each other as they all measure the hitting performance with slight difference in definitions, we suspect that there could be some multicollinearity issues in the model. We can check the correlations among these three variables to confirm this.
+```{r}
+cor(data.frame(moneyball$OBP, moneyball$SLG, moneyball$BA))
+```
+
+
+We can see that these three variables are indeed highly correlated to each other since all the correlation coefficients are larger than 0.8. To decide which variable(s) to keep, we need to perform more analysis.
+
+
+First, let's conduct univariate analysis for these three variables separately to check their predictive power. By univariate analysis, we mean running single-variable linear regression.
+```{r}
+PredictRS1 = lm(RS ~ OBP, data = moneyball)
+summary(PredictRS1)
+```
+
+
+```{r}
+PredictRS2 = lm(RS ~ SLG, data = moneyball)
+summary(PredictRS2)
+```
+
+
+```{r}
+PredictRS3 = lm(RS ~ BA, data = moneyball)
+summary(PredictRS3)
+```
+
+
+The above univariate analysis shows that using *OBP* and *SLG* alone gives much higher $R^2$ than *BA*, and the coefficient of *OBP* is much larger than that of *SLG*. Let's confirm the findings in multiple linear regression with *OBP* and *SLG*.
+```{r}
+PredictRS4 = lm(RS ~ SLG + OBP, data = moneyball)
+summary(PredictRS4)
+```
+
+
+We can observe that the $R^2$ of this model is similar to the model with all the three variables, which is `r round(summary(PredictRS)$r.squared,4)`. This indicates that both models are similar in terms of predictive power. In other words, the effect of *BA* can almost be captured by *OBP* and *SLG*. The coefficients of *OBP* and *SLG* confirm the relative importance of the variables as claimed in Moneyball. You can perform further analysis using other combinations of variables, and you will find that $R^2$ of other combinations (*BA* + *OBP* or *BA* + *SLG*) would be significantly less than `r round(summary(PredictRS)$r.squared,4)`.
+
+
+Note that we decide to keep both *OBP* and *SLG* even though they are highly correlated to each for two main reasons. First, $R^2$ from the model using these two variables are significantly higher than those from single-variable models using each variable alone, which suggests that there is significant amount of information in each variable that cannot be captured by the other one. Second, the coefficients for both variables are significantly positive, and their magnitudes are consistent with univariate analysis.
+
+
+
+# Predicting Runs Allowed
+
+
+
+We can conduct similar linear regression analysis to construct a model to predict runs allowed. We omit the details here as the process is almost identical.
+```{r}
+PredictRA = lm(RA ~ OOBP + OSLG, data = moneyball)
+summary(PredictRA)
+```
+
+

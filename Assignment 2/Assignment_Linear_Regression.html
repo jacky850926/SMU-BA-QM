@@ -1699,6 +1699,11 @@ df %&gt;% count(Q1)</code></pre>
 {"columns":[{"label":["Q1"],"name":[1],"type":["chr"],"align":["left"]},{"label":["n"],"name":[2],"type":["int"],"align":["right"]}],"data":[{"1":"Female","2":"277"},{"1":"Male","2":"723"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
   </script>
 </div>
+<pre class="r"><code>#another way of doing calculation
+male &lt;- subset(train, Gender ==&quot;Male&quot;)
+precentage_male = nrow(male)/nrow(train)
+precentage_male</code></pre>
+<pre><code>## [1] 0.723</code></pre>
 <ol style="list-style-type: decimal">
 <li><p>Load and explore the training data file, check summary statistics
 of all the variables, and answer the following questions.</p>
@@ -1827,7 +1832,7 @@ ArterialpO2 , Creatinine , Urea , GCS
 
 iii) What do you think about the accuracy and values of the model?
 
-Due to the low R^2, and not enough signficant fators to present as useful variable</code></pre>
+R-square only 7.5%, which means the linear regression model can only explained 7.5% of the variation dat, is not that useful. Can not explained the data</code></pre>
 <ol start="4" style="list-style-type: decimal">
 <li>We want to test the performance of our models using the test data
 set.</li>
@@ -1869,9 +1874,10 @@ R1 = (1 - SSE1/SST1)
 # the out-of-sample R^2
 R1</code></pre>
 <pre><code>## [1] 0.09480606</code></pre>
-<pre><code>i) What is the out-of-sample $R^2$ of the model using all the variables? Please check carefully how the out-of-sample $R^2$ is computed in the lecture note for the wine case study. Note that the benchmark baseline model is still the historical average price of the training data set, not the average price of the test data set. The point here is that the benchmark model also does not know the future, and it cannot use the future average price to predict the future. </code></pre>
-<p>-0.03569267</p>
-<pre><code>ii) What is the out-of-sample $R^2$ of our first model using only vital signs?
+<pre><code>i) What is the out-of-sample $R^2$ of the model using all the variables? Please check carefully how the out-of-sample $R^2$ is computed in the lecture note for the wine case study. Note that the benchmark baseline model is still the historical average price of the training data set, not the average price of the test data set. The point here is that the benchmark model also does not know the future, and it cannot use the future average price to predict the future. 
+-0.03569267
+
+ii) What is the out-of-sample $R^2$ of our first model using only vital signs?
 0.09480606</code></pre>
 </div>
 
