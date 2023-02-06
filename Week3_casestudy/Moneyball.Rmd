@@ -17,15 +17,22 @@ output:
 
 
 
-Let's first read the data set from the file. 
+Let's first read the data set from the file.
+
+
 ```{r}
+
+#read the file
 baseball = read.csv("Moneyball.csv", stringsAsFactors = TRUE)
+#list the detail
+
 str(baseball)
 ```
 
 
 Since we are confirming the claims made in Moneyball, we want to build models using the data Paul DePodesta had in 2002. 
 ```{r}
+#create a subset that only contains the data before 2002
 moneyball = subset(baseball, Year < 2002)
 str(moneyball)
 ```
@@ -41,6 +48,8 @@ We will work on this subset of the data from now on.
 
 We first build a linear regression model to predict wins using the difference between runs scored and runs allowed. To make this a little easier, we can create a new variable called, *RD*, for run difference, and set that equal to runs scored minus runs allowed.
 ```{r}
+
+#create a variable (RS-RA)
 moneyball$RD = moneyball$RS - moneyball$RA
 str(moneyball)
 ```
@@ -48,12 +57,15 @@ str(moneyball)
 
 Now we are ready to build the linear regression model using the new variable.
 ```{r}
+
 PredictWins = lm(W ~ RD, data = moneyball)
 summary(PredictWins)
 ```
 
 
 This gives us the linear regression equation for wins shown in the slides.
+
+the summary of SLR shows that the coeffieicnt is significant and R-square shows that most of the data can be expainable
 
 
 
@@ -62,6 +74,16 @@ This gives us the linear regression equation for wins shown in the slides.
 
 
 We want to see if we can use linear regression to predict runs scored (*RS*) using the three hitting statistics, on-base percentage (*OBP*), slugging percentage (*SLG*), and batting average (*BA*).
+
+1. Negaitve Beta0 does not make sense when all the var are 0 
+2. need to check to collinearity of different var , how to check it?
+ans: BA does not make sense in the senario, u find some vars do not make sense
+we can check out for the collinearity
+the value of the other var inflated when the model has the issue
+
+
+
+
 ```{r}
 PredictRS = lm(RS ~ OBP + SLG + BA, data = moneyball)
 summary(PredictRS)
@@ -102,9 +124,29 @@ summary(PredictRS3)
 
 The above univariate analysis shows that using *OBP* and *SLG* alone gives much higher $R^2$ than *BA*, and the coefficient of *OBP* is much larger than that of *SLG*. Let's confirm the findings in multiple linear regression with *OBP* and *SLG*.
 ```{r}
+
+#comparing of these MLR -> we could know that SLG+ OBP is better fit model
 PredictRS4 = lm(RS ~ SLG + OBP, data = moneyball)
-summary(PredictRS4)
+#把summary 放進來
+output=summary(PredictRS4)
+output$r.squared
+summary(output)
+
+
+
+PredictRS5 = lm(RS ~ BA + OBP, data = moneyball)
+summary(PredictRS5)
+
+PredictRS6 = lm(RS ~ BA + SLG, data = moneyball)
+summary(PredictRS6)
+
 ```
+
+
+question:
+why eventually we choose the model of 2 , but model of 3 , when prof saying that model of 3 has higher R square tham model of 2?
+ 3
+
 
 
 We can observe that the $R^2$ of this model is similar to the model with all the three variables, which is `r round(summary(PredictRS)$r.squared,4)`. This indicates that both models are similar in terms of predictive power. In other words, the effect of *BA* can almost be captured by *OBP* and *SLG*. The coefficients of *OBP* and *SLG* confirm the relative importance of the variables as claimed in Moneyball. You can perform further analysis using other combinations of variables, and you will find that $R^2$ of other combinations (*BA* + *OBP* or *BA* + *SLG*) would be significantly less than `r round(summary(PredictRS)$r.squared,4)`.

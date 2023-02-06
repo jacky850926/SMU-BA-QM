@@ -26,6 +26,7 @@ In this exercise, we are interested in predicting a patient's length of stay (LO
 library(dplyr)
 # load csv
 train = read.csv("Assignment_Linear_Regression_Data_Train.csv")
+str(train)
 # find the avg of the table
 summary(train)
 

@@ -1,0 +1,203 @@
+---
+title: "Diabetes Care"
+author: "ZHENG Zhichao (Daniel)"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    theme: readable
+    self_contained: TRUE
+    toc: TRUE
+    number_sections: TRUE
+    df_print: paged
+---
+編譯的時候 改一些參數
+
+
+```{r global-options, echo = FALSE, message = FALSE}
+knitr::opts_chunk$set(warning = FALSE, 
+                      fig.height = 6,
+                      fig.width = 6,
+                      fig.align = "center")
+```
+
+
+
+# Loading and Exploring the Data Set
+
+
+
+Let's first read the data set from the file. 
+```{r}
+quality = read.csv("Diabetes.csv")
+str(quality)
+```
+
+
+*MemberID* is the unique identifier that numbers patients from 1 to `r nrow(quality)`. *InpatientDays* is the number of inpatient visits or the number of days that the patient spent in the hospital. *ERVisits* is the number of times the patient visited the emergency room. *OfficeVisits* is the number of times that the patient visited any doctor's office. *Narcotics* is the number of prescriptions that the patient had for narcotics. *DaysSinceLastERVisit* is the number of days between the patient's last emergency room (ER) visit and the end of the study period, and it is set to the length of the study period if they never visited the ER. *Pain* is the number of visits for which the patient complained about pain. *TotalVisits* is the total number of times the patient visited any healthcare provider. *ProviderCount* is the number of providers that served the patient. *MedicalClaims* is the number of days on which the patient had a medical claim. *ClaimLines* is the total number of medical claims. *StartedOnCombination* is whether or not the patient was started on a combination of drugs to treat their diabetes. *AcuteDrugGapSmall* is the fraction of acute drugs that were refilled quickly after the prescription ran out. *PoorCare* is the dependent variable, and is equal to 1 if the patient had poor care, and equal to 0 if the patient had good care.
+
+
+We can see how many patients received poor care and how many patients received good care by using the 'table' function.
+```{r}
+table(quality$PoorCare)
+```
+
+
+The percentage of patients received poor care can be computed as follows.
+```{r}
+percPC = sum(quality$PoorCare)/nrow(quality)
+percPC
+```
+
+
+You can see from the output of the 'str' function that the variable *PoorCare* is of 'int' type, which stands for integer. By default, R treats numbers in the data file according to the type that it was recorded. In this case, since *PoorCare* is recorded as 0 or 1 in the data file, it is treated as a numerical variable, in particular, an integer variable. For numerical variables, we can use the 'summary' function to take a look at some of its statistics.
+```{r}
+summary(quality$PoorCare)
+```
+
+
+However, in our case, *PoorCare* should be treated as a categorical variable, i.e., 'Factor' variable type in R. The type of variable will make a big difference in the way that R handles the variable. We can convert its type to 'Factor' using the following command.
+```{r}
+quality$PoorCare = as.factor(quality$PoorCare)
+str(quality)
+```
+
+
+Now, if we apply the 'summary' function on *PoorCare*, it will be handled differently. No statistics will be computed because it is not a number now. What you will see is count for each possible outcome, called factor level in R.
+```{r}
+summary(quality$PoorCare)
+```
+
+
+
+# Baseline Model for Predicting Patients Receiving Good Care
+
+
+
+The baseline model for such a classification problem is to just predict the most frequent outcome for all observations. Since good care is more common than poor care, we would predict that all patients are receiving good care, which gives us an accuracy of `r round(100*(1 - percPC), digits = 2)`%.
+
+
+
+# Splitting the Data Set for Training and Testing
+
+
+
+It is a good practice to train and test any models using different data sets as we have done before. In this case, we only have one data set, so the common practice is to randomly split the data set into a training set and a test set, where the test set is used to measure the out-of-sample accuracy of our model.
+
+
+To do this, we need to add a new package to R. There are many functions and algorithms built into R, but there are many more that you can install. We will do this several times throughout this course. In the Rstudio interface, you can type in Console to install any packages. Let's type 'install.packages("caTools")' and hit Enter.
+
+
+Now we are ready to load the package into our current R session by using the command 'library(caTools)'.
+```{r echo = TRUE, message = FALSE, warning = FALSE}
+library(caTools)
+```
+
+
+Sometimes we will get a warning message based on the version of R that we are using. This can usually be safely ignored. You can use various chunk options to suppress the warning messages. You can check the first code chunk at the beginning of this document for setting global options that include muting any warning messages. In the future, whenever you want to use a package, you do not need to install it again, but you will need to load it.
+
+
+Now, let's use this package to randomly split our data into a training set and a test set. We will do this by using a function called 'sample.split', which is part of the "caTools" package. Since this function randomly splits your data, it could split it differently for each of us. To make sure that we all get the same split, we can set our seed to the same number. The seed initializes the random number generator. This is important not only to make sure we all get the same results later but also to make it easier to check your work in the future. Otherwise, if you do not set the seed, everytime when you run your code and regenerate the results, you will get different numbers, which can make debugging and model improvement very challenging. We will use this feature again and again in this course and you will be very familiar with it.
+```{r}
+#set.seed 是不讓他改變變量, set seet之後的變量 可以自己改變他, 相同數字會跑出相同的效果 (跟記憶體的進出有關係)
+set.seed(123)
+
+#split 是從data中隨機抽樣
+# 是否數據足夠隨機 (分test and train data)
+split = sample.split(quality$PoorCare, SplitRatio = 0.70)
+split
+```
+ 
+
+The first argement in the 'sample.split' function makes sure that in the training set, around `r round(100*percPC, digits = 2)`% of the patients received poor care, and in the test set `r round(100*percPC, digits = 2)`% of the patients received poor care. In other words, the *PoorCare* variable is balanced in training and test sets. We want to do this so that our test set is representative of the training set. The split function creates a list of TRUE or FALSE values for each of our observations, and we store it in a variable, which is named *split* in the above code. TRUE means that we should put that observation in the training set (the 70% portion), and FALSE means that we should put that observation in the test set. Now let's create the training and test sets using the 'subset' function.
+```{r}
+qualityTrain = subset(quality, split == TRUE)
+qualityTest = subset(quality, split == FALSE)
+```
+
+
+The above code puts all the data points whose corresponding values in *split* are TURE into a new data frame named *qualityTrain*, which will be our training set, and the rest whose corresponding values in *split* are FALSE into another new data frame named *qualityTest*, which will be the test set. We can check the number of data points in the training set and the test set, and confirm that the fractions of patients who received poor care are indeed similar to the whole dataset.
+```{r}
+table(qualityTrain$PoorCare)
+table(qualityTest$PoorCare)
+```
+
+
+
+# Building a Logistic Regression Model
+
+
+
+Now, we are ready to build a logistic regression model using *OfficeVisits* and *Narcotics* as independent variables, similar to building a linear regression model. In the code below, we use the function, 'glm,' which stands for generalized linear model. The argument, *family = binomial*, indicates that we are trying to predict two possible outcomes so that the logistic regression model will be called from the class of generalized linear models.
+```{r}
+#logistic model => glm
+QualityLog = glm(PoorCare ~ OfficeVisits + Narcotics, data = qualityTrain, family = binomial)
+summary(QualityLog)
+
+
+# AIC is used to choose for whether it is the good model but not in te course 
+```
+
+
+The model output is also similar to a linear regression model. The AIC value is a measure of the quality of the model and is like the adjusted R-squared in that it accounts for the number of variables used compared to the number of observations. It provides a means for model selection, but one can only use it to compare models built on the same data set. The preferred model is the one with the minimum AIC. The last line has to do with the algorithm (Newton-Raphson algorithm or Newton's Method by default) that is used to find the coefficients (through solving an optimization problem). This information on AIC and algorithm will not be tested.
+
+
+
+# In-Sample Model Performance
+
+
+
+We can now make predictions on the training set. The argument *type = "response"* in the code below makes sure that the algorithm uses the logistic response function to compute the predictions, which should be numbers between 0 and 1. 
+```{r}
+predictTrain = predict(QualityLog, type = "response")
+summary(predictTrain)
+```
+
+
+Without the argument *type = "response"*, we will get the values of the logit function, before being transformed into numbers between 0 and 1 by the logistic response function.
+```{r}
+predictTrainWrong = predict(QualityLog)
+summary(predictTrainWrong)
+```
+
+
+Let's take a look at the predicted probabilities of receiving poor care for the first ten patients in the training set, and compare them to the actual observations.
+```{r}
+predictTrain[1:10]
+qualityTrain$PoorCare[1:10]
+```
+Note that the indices in the display of the first ten elements in *predictTrain* correspond to the indices of patients in the original data frame before random splitting into the training and test sets. You can confirm this by referring the output from displaying *split* in the above code chunk.
+
+
+Let's see if the model is predicting higher probabilities for the actual poor care cases as we expect. The 'tapply' function below computes the average predicted probabilities for patients who actually received poor care or good care.
+```{r}
+tapply(predictTrain, qualityTrain$PoorCare, mean)
+```
+
+
+If we use 0.5 as the threshold, we get the following confusion matrix.
+```{r}
+conf05 = table(qualityTrain$PoorCare, predictTrain > 0.5)
+conf05
+```
+
+
+You can see here that for `r conf05[1,1]` cases, we predict good care, and they received good care; and for `r conf05[2,2]` cases, we predict poor care, and they received poor care. We make `r conf05[1,2]` mistakes where we say poor care, but care was good, and we make `r conf05[2,1]` mistakes where we say good care, but the care was poor. The accuracy of the prediction using 0.5 as the threshold is `r conf05[1,1] + conf05[2,2]`/`r nrow(qualityTrain)` = `r round(100*(conf05[1,1] + conf05[2,2])/nrow(qualityTrain), digits = 2)`%.
+
+
+
+# Troubleshooting
+
+
+
+If your package installation fails with the following error message:
+```
+Warning in install.packages :
+  unable to access index for repository https://cran.rstudio.com/src/contrib:
+  cannot open URL 'https://cran.rstudio.com/src/contrib/PACKAGES'
+```
+you may need to set a default CRAN mirror by typing the following command in your R Console:
+```
+options(repos = c(CRAN = "http://cran.rstudio.com"))
+```
+
+

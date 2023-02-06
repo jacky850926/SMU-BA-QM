@@ -1,0 +1,180 @@
+---
+title: "Hands-On Exercise 6"
+author: "Hsin Chieh Ma"
+format: html
+editor: visual
+---
+
+format can change here : pdf, html , docx
+
+WorkShop-EP6-R
+
+Installing and loading R packages
+
+```{r}
+#install package: pacman -> basic program R  function
+#package in R
+pacman::p_load(tidyverse, tidyquant, timetk)
+
+
+```
+
+Importing Singapore Company Data
+
+```{r}
+
+company <-read.csv("data/SGCompany.csv")
+company
+
+```
+
+從網路上把 "company" 中的symbol的數據拿下來
+
+```{r}
+Stock_daily <- company %>%
+  select(Symbol) %>%
+  tq_get(get ="stock.prices",
+         from = "2022-01-01",
+         to = "2022-12-31")
+```
+
+把兩個table company combine在一起
+
+```{r}
+Stock_data <- Stock_daily %>%
+  left_join(company)
+```
+
+close = closing price
+
+geom_line() =\>把線畫出來
+
+labs =\> 改表格名字
+
+theme_tq() = belong to tidyquant -\> give you the. whole structure -\> tickline-\> 改顏色(主題而已),沒有也沒關係
+
+```{r}
+Stock_data %>%
+  filter(Name == "DBS Group") %>%
+  ggplot(aes(x = date, y = close)) +
+    geom_line() +
+    labs(title = "DBS Group Holdings Ltd (DBSDF) Daily Stock Price",
+         y = "Closing Price", x = "") +
+    theme_tq()
+```
+
+facet_ncol = 表格打算怎麼排放 (一行2個)
+
+facet_scale = 價格的range
+
+interactive = 鼠標上去的時候 會有反應
+
+blue line = moving avg curve (30Days)
+
+```{r}
+Stock_data %>%
+  group_by(Name) %>%
+  plot_time_series(date, close,
+                   .facet_ncol   = 2,
+                   .facet_scales = "free",
+                   .interactive  = TRUE)
+```
+
+```{r}
+end <- as_date("2022-06-30")
+start <- end - weeks(2)
+Stock_data %>%
+  filter(Name == "DBS Group") %>%
+  filter(date >= start - days(2 * 15)) %>%
+ggplot(aes(x=date, y=close)) +
+  geom_candlestick(aes(open=open,
+                       high=high,
+                       low=low,
+                       close=close)) +
+                       labs(title = "Daily stock prices of DBS Group") +
+  coord_x_date(xlim = c(start, end)) +
+  theme_tq()
+```
+
+還有一次很多圖表的\*
+
+需要自己寫\*
+
+MA的R寫法
+
+```{r}
+Stock_data %>%
+  filter(Symbol == "D05.SI") %>%
+  filter(date >= start - days(2 * 15)) %>%
+  ggplot(aes(x = date, y = close)) +
+  geom_candlestick(aes(open = open, high = high, low = low, close = close)) +
+  geom_ma(ma_fun = SMA, n = 5, linetype = 5, size = 1.25) +
+  geom_ma(ma_fun = SMA, n = 15, color = "red", size = 1.25) +
+    labs(title = "DBS Group Holdings Ltd Daily Stock Price",
+         subtitle = "5 and 15-Day SMA",
+         y = "Closing Price", x = "") +
+    coord_x_date(xlim = c(end - weeks(5), end)) +
+                   theme_tq()
+```
+
+```{r}
+SGBank <- read_csv("data/SGBank.csv")
+
+```
+
+```{r}
+SGBank_daily <- SGBank %>%
+  select(Symbol) %>%
+  tq_get(get = "stock.prices",
+         from = "2020-04-01",
+         to = "2022-06-30")
+```
+
+```{r}
+SGBank_returns_monthly  <- SGBank_daily %>%
+group_by(Symbol) %>%
+tq_transmute(select = adjusted,
+mutate_fun = periodReturn,
+period = "monthly",
+col_rename = "Ra")
+```
+
+```{r}
+SGBank_returns_monthly
+```
+
+```{r}
+wts <- c(0.4, 0.3, 0.3)
+porfolio_returns_monthly <- SGBank_returns_monthly %>%
+  tq_portfolio(assets_col = Symbol,
+               returns_col = Ra,
+               weights = wts,
+               col_rename = "Ra")
+```
+
+```{r}
+ggplot(data = porfolio_returns_monthly,
+       aes(x = date, y = Ra)) +
+  geom_bar(stat = "identity",
+           fill = palette_light()[[1]]) +
+  labs(title = "Porfoli Returns",
+       subtitle = "40% DBS, 30% OCBC and 30% UOB",
+       caption = "Shows an above zero trend meaning
+       positive returns",
+       x = "", y = "Monthly Returns") +
+  geom_smooth(method = "lm") +
+  theme_tq() +
+  scale_color_tq() +
+  scale_y_continuous(labels = scales::percent)
+```
+
+```{r}
+wts <- c(0.4, 0.3, 0.3)
+portfolio_growth_monthly <- SGBank_returns_monthly %>%
+  tq_portfolio(assets_col = Symbol,
+               returns_col = Ra,
+               weights = wts,
+               col_rename = "investment.growth",
+               wealth.index = TRUE) %>%
+  mutate(investment.growth = investment.growth * 100000)
+```
